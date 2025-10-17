@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Build directories
+builds/
+*.dmg
+*.exe
+installer.nsi
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test media files (keep structure but ignore large files)
+test_media/**/*.mp3
+test_media/**/*.wav
+test_media/**/*.mp4
+test_media/**/*.avi
+test_media/**/*.mkv
+test_media/**/*.mov
+test_media/**/*.webm
+test_media/**/*.flv
+!test_media/README.md
+
+# App settings
+settings.json
+
+# Temporary files
+*.tmp
+*.temp
+.temporary/

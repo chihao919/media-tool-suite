@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(pkill:*)",
+      "Read(//Users/chihao1/**)",
+      "Bash(./package.sh)",
+      "Bash(tree:*)",
+      "Bash(ffplay:*)",
+      "Bash(pip3 install:*)",
+      "Bash(./create_app.sh:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "WebSearch",
+      "Bash(./build_all.sh)",
+      "Bash(codesign:*)",
+      "Bash(open dist/檔案豪幫手.app)",
+      "Bash(./檔案豪幫手)",
+      "Bash(./檔案豪幫手.command)",
+      "Bash(yt-dlp:*)",
+      "Bash(awk:*)",
+      "Bash(brew list:*)",
+      "Bash(brew install:*)",
+      "Bash(open \"https://github.com/ExistentialAudio/BlackHole/releases\")",
+      "Bash(system_profiler:*)",
+      "Read(//Library/Audio/Plug-Ins/HAL/**)",
+      "Bash(pip3 list:*)",
+      "Bash(open \"builds/dist/檔案豪幫手.app\")",
+      "Bash(cat:*)",
+      "Bash(git config:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

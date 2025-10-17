@@ -1,0 +1,20 @@
+# Core dependencies
+# tkinter is included with Python
+# pathlib is included with Python 3.4+
+# json is included with Python
+
+# Testing dependencies
+pytest>=7.0.0
+
+# Optional dependencies for enhanced functionality
+# tkinterdnd2==0.3.0  # Drag and drop support (optional)
+
+# Note: FFmpeg must be installed separately and available in PATH
+# - macOS: brew install ffmpeg
+# - Windows: Download from https://ffmpeg.org/download.html
+# - Linux: sudo apt install ffmpeg
+
+# Screen Recording Requirements (macOS only):
+# - FFmpeg (required, see above)
+# - BlackHole 2ch (optional, for system audio recording)
+#   Download from: https://github.com/ExistentialAudio/BlackHole

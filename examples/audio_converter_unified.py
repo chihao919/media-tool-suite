@@ -23,6 +23,12 @@ class UnifiedAudioConverter:
         self.normalize = tk.BooleanVar(value=False)
         self.sample_rate = tk.StringVar(value="44100")
 
+        # Split options
+        self.split_enabled = tk.BooleanVar(value=False)
+        self.split_mode = tk.StringVar(value="size")  # "size" or "duration"
+        self.split_size = tk.StringVar(value="200")  # MB
+        self.split_duration = tk.StringVar(value="300")  # seconds (5 minutes)
+
         self.create_widgets()
 
     def create_widgets(self):
@@ -142,12 +148,63 @@ class UnifiedAudioConverter:
 
         # Options
         options_frame = ttk.LabelFrame(self.advanced_frame, text="Options", padding="10")
-        options_frame.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
+        options_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N), pady=5)
 
         ttk.Checkbutton(options_frame, text="Normalize Audio",
                        variable=self.normalize).pack(anchor=tk.W)
 
-        ttk.Label(options_frame, text="Output Folder:").pack(anchor=tk.W, pady=(10, 0))
+        # Split options section
+        ttk.Separator(options_frame, orient='horizontal').pack(fill=tk.X, pady=10)
+
+        split_check = ttk.Checkbutton(options_frame, text="Split Large Files",
+                                      variable=self.split_enabled,
+                                      command=self.toggle_split_options)
+        split_check.pack(anchor=tk.W)
+
+        # Split options frame (initially hidden)
+        self.split_options_frame = ttk.Frame(options_frame)
+        self.split_options_frame.pack(anchor=tk.W, pady=(5, 0))
+
+        # Split mode selection
+        split_mode_frame = ttk.Frame(self.split_options_frame)
+        split_mode_frame.pack(anchor=tk.W)
+
+        ttk.Label(split_mode_frame, text="Split by:").pack(side=tk.LEFT, padx=(20, 5))
+        ttk.Radiobutton(split_mode_frame, text="Size", value="size",
+                       variable=self.split_mode,
+                       command=self.update_split_display).pack(side=tk.LEFT)
+        ttk.Radiobutton(split_mode_frame, text="Duration", value="duration",
+                       variable=self.split_mode,
+                       command=self.update_split_display).pack(side=tk.LEFT, padx=(10, 0))
+
+        # Split value frame
+        self.split_value_frame = ttk.Frame(self.split_options_frame)
+        self.split_value_frame.pack(anchor=tk.W, pady=5)
+
+        # Size input
+        self.size_frame = ttk.Frame(self.split_value_frame)
+        ttk.Label(self.size_frame, text="    Max size:").pack(side=tk.LEFT)
+        size_entry = ttk.Entry(self.size_frame, textvariable=self.split_size, width=8)
+        size_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Label(self.size_frame, text="MB").pack(side=tk.LEFT)
+
+        # Duration input
+        self.duration_frame = ttk.Frame(self.split_value_frame)
+        ttk.Label(self.duration_frame, text="    Duration:").pack(side=tk.LEFT)
+        duration_entry = ttk.Entry(self.duration_frame, textvariable=self.split_duration, width=8)
+        duration_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Label(self.duration_frame, text="seconds").pack(side=tk.LEFT)
+
+        # Initially show size frame
+        self.size_frame.pack(anchor=tk.W)
+
+        # Initially hide split options if not enabled
+        if not self.split_enabled.get():
+            self.split_options_frame.pack_forget()
+
+        # Output folder section
+        ttk.Separator(options_frame, orient='horizontal').pack(fill=tk.X, pady=10)
+        ttk.Label(options_frame, text="Output Folder:").pack(anchor=tk.W)
         output_entry = ttk.Entry(options_frame, textvariable=self.output_dir, width=20)
         output_entry.pack(anchor=tk.W)
         ttk.Button(options_frame, text="Browse",
@@ -192,10 +249,26 @@ class UnifiedAudioConverter:
         """Show advanced interface"""
         self.simple_frame.pack_forget()
         self.advanced_frame.pack(fill=tk.BOTH, expand=True)
-        self.root.geometry("700x500")
+        self.root.geometry("700x550")  # Slightly taller for split options
 
         # Sync listbox content
         self.sync_listboxes(self.simple_listbox, self.advanced_listbox)
+
+    def toggle_split_options(self):
+        """Show/hide split options based on checkbox"""
+        if self.split_enabled.get():
+            self.split_options_frame.pack(anchor=tk.W, pady=(5, 0))
+        else:
+            self.split_options_frame.pack_forget()
+
+    def update_split_display(self):
+        """Update displayed split input based on mode"""
+        if self.split_mode.get() == "size":
+            self.duration_frame.pack_forget()
+            self.size_frame.pack(anchor=tk.W)
+        else:
+            self.size_frame.pack_forget()
+            self.duration_frame.pack(anchor=tk.W)
 
     def sync_listboxes(self, from_listbox, to_listbox):
         """Sync content between listboxes when switching modes"""
@@ -330,6 +403,10 @@ class UnifiedAudioConverter:
                 # Run conversion
                 subprocess.run(cmd, check=True, capture_output=True)
 
+                # Split file if enabled and in advanced mode
+                if self.advanced_mode.get() and self.split_enabled.get():
+                    self.split_output_file(output_file, output_folder)
+
             except Exception as e:
                 print(f"Error converting {input_file}: {e}")
 
@@ -343,6 +420,66 @@ class UnifiedAudioConverter:
             self.root.after(0, lambda: self.simple_convert_btn.config(state='normal'))
 
         self.root.after(0, lambda: messagebox.showinfo("Success", f"Converted {total} files successfully!"))
+
+    def split_output_file(self, file_path, output_folder):
+        """Split the converted file based on size or duration"""
+        try:
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+
+            # Check if file needs splitting
+            if self.split_mode.get() == "size":
+                max_size_mb = float(self.split_size.get())
+                if file_size_mb <= max_size_mb:
+                    return  # No need to split
+
+            # Get file duration
+            probe_cmd = ['ffprobe', '-v', 'error', '-show_entries',
+                        'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1',
+                        file_path]
+            result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
+            total_duration = float(result.stdout.strip())
+
+            # Calculate split parameters
+            if self.split_mode.get() == "size":
+                max_size_mb = float(self.split_size.get())
+                num_parts = int(file_size_mb / max_size_mb) + 1
+                part_duration = total_duration / num_parts
+            else:  # duration mode
+                part_duration = float(self.split_duration.get())
+                num_parts = int(total_duration / part_duration) + 1
+
+            # Only split if we have more than 1 part
+            if num_parts <= 1:
+                return
+
+            # Split the file
+            base_path = Path(file_path)
+            base_name = base_path.stem
+            extension = base_path.suffix
+
+            status_label = self.get_current_status()
+            self.root.after(0, lambda: status_label.config(text=f"Splitting {base_name}{extension}..."))
+
+            for i in range(num_parts):
+                start_time = i * part_duration
+                duration = min(part_duration, total_duration - start_time)
+
+                output_name = f"{base_name}_part{i+1}{extension}"
+                output_path = os.path.join(output_folder, output_name)
+
+                split_cmd = ['ffmpeg', '-i', file_path,
+                           '-ss', str(start_time),
+                           '-t', str(duration),
+                           '-c', 'copy',  # Use copy codec for faster splitting
+                           '-y', output_path]
+
+                subprocess.run(split_cmd, check=True, capture_output=True)
+
+            # Remove original file after successful split
+            os.remove(file_path)
+
+        except Exception as e:
+            print(f"Error splitting file {file_path}: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
