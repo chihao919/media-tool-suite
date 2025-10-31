@@ -31,10 +31,10 @@ class YouTubeTab(BaseTab):
 
         # Progress and status
         self.progress = ttk.Progressbar(youtube_frame, mode='determinate')
-        self.progress.pack(fill=tk.X, pady=5)
+        self.progress.pack(fill=tk.X, pady=5, padx=20)
 
         self.status = ttk.Label(youtube_frame, text="Ready")
-        self.status.pack()
+        self.status.pack(pady=5)
 
     def _create_url_input(self, parent):
         """Create URL input section"""

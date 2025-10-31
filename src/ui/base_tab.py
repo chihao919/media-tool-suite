@@ -88,12 +88,12 @@ class BaseTab(ABC):
         """
         # Progress bar
         progress = ttk.Progressbar(self.main_frame, mode='determinate')
-        progress.pack(fill=tk.X, pady=5)
+        progress.pack(fill=tk.X, pady=5, padx=20)
         setattr(self, progress_var_name, progress)
 
         # Status label
         status = ttk.Label(self.main_frame, text="Ready")
-        status.pack()
+        status.pack(pady=5)
         setattr(self, status_var_name, status)
 
     def update_status(self, message, status_var_name='status'):
