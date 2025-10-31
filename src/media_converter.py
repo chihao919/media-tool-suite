@@ -157,11 +157,11 @@ class MediaConverterApp:
             btn = tk.Button(
                 tab_selector_frame, text=name,
                 command=lambda i=index: self.switch_tab(i),
-                font=('Helvetica', 11), width=13, height=1,
+                font=('Helvetica', 13), width=15, height=2,
                 relief=tk.RAISED, bd=2, bg='#f0f0f0',
                 activebackground='#e0e0e0', cursor='hand2'
             )
-            btn.pack(side=tk.LEFT, padx=2, pady=2)
+            btn.pack(side=tk.LEFT, padx=3, pady=3)
             self.tab_buttons[index] = btn
 
     def _configure_styles(self):
@@ -185,9 +185,9 @@ class MediaConverterApp:
         """Update button styles to show active tab"""
         for idx, btn in self.tab_buttons.items():
             if idx == active_index:
-                btn.configure(font=('Helvetica', 11, 'bold'), relief=tk.SUNKEN, bg='#d0d0d0')
+                btn.configure(font=('Helvetica', 13, 'bold'), relief=tk.SUNKEN, bg='#d0d0d0')
             else:
-                btn.configure(font=('Helvetica', 11), relief=tk.RAISED, bg='#f0f0f0')
+                btn.configure(font=('Helvetica', 13), relief=tk.RAISED, bg='#f0f0f0')
 
     # ========== Delegate methods to handlers ==========
     
