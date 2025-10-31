@@ -118,6 +118,73 @@ class YouTubeTab(BaseTab):
             width=5
         ).pack(side=tk.LEFT)
 
+        # Split settings (shown when Download & Split mode is selected)
+        self._create_split_settings(options_frame)
+
+    def _create_split_settings(self, parent):
+        """Create split settings section"""
+        self.split_settings_frame = ttk.LabelFrame(parent, text="Split Settings (for Download & Split mode)", padding="10")
+        self.split_settings_frame.pack(fill=tk.X, pady=10)
+
+        # Split mode selection
+        mode_frame = ttk.Frame(self.split_settings_frame)
+        mode_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(mode_frame, text="Split by:").pack(side=tk.LEFT, padx=(0, 10))
+
+        ttk.Radiobutton(
+            mode_frame,
+            text="Duration (seconds)",
+            value="duration",
+            variable=self.app.split_mode
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Radiobutton(
+            mode_frame,
+            text="File Size (MB)",
+            value="size",
+            variable=self.app.split_mode
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Radiobutton(
+            mode_frame,
+            text="Number of Parts",
+            value="parts",
+            variable=self.app.split_mode
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Split value input
+        value_frame = ttk.Frame(self.split_settings_frame)
+        value_frame.pack(fill=tk.X, pady=5)
+
+        self.split_label = ttk.Label(value_frame, text="Duration (seconds):")
+        self.split_label.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.split_entry = ttk.Entry(value_frame, textvariable=self.app.split_duration, width=15)
+        self.split_entry.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.split_unit = ttk.Label(value_frame, text="(5 minutes = 300)", foreground="gray")
+        self.split_unit.pack(side=tk.LEFT)
+
+        # Update UI when mode changes
+        self.app.split_mode.trace_add('write', lambda *args: self._update_split_ui())
+
+    def _update_split_ui(self):
+        """Update split UI based on selected mode"""
+        mode = self.app.split_mode.get()
+        if mode == "duration":
+            self.split_label.config(text="Duration (seconds):")
+            self.split_entry.config(textvariable=self.app.split_duration)
+            self.split_unit.config(text="(5 minutes = 300)")
+        elif mode == "size":
+            self.split_label.config(text="File size (MB):")
+            self.split_entry.config(textvariable=self.app.split_size)
+            self.split_unit.config(text="(1 GB = 1024 MB)")
+        elif mode == "parts":
+            self.split_label.config(text="Number of parts:")
+            self.split_entry.config(textvariable=self.app.split_parts)
+            self.split_unit.config(text="(2-10 parts)")
+
     def download_youtube(self):
         """Start YouTube download"""
         self.app.download_youtube_unified()
