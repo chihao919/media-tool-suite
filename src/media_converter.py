@@ -21,7 +21,17 @@ class TabbedMediaConverter:
     def __init__(self, root):
         self.root = root
         self.root.title(AppConstants.APP_NAME)
-        self.root.geometry(f"{AppConstants.WINDOW_WIDTH}x{AppConstants.WINDOW_HEIGHT}")
+
+        # Set window size - make it larger to accommodate all tabs
+        window_width = 900
+        window_height = 700
+        self.root.geometry(f"{window_width}x{window_height}")
+
+        # Set minimum size
+        self.root.minsize(window_width, window_height)
+
+        # Allow user to resize manually
+        self.root.resizable(True, True)
 
         # Variables for Convert tab
         self.convert_file_list = []
@@ -42,7 +52,7 @@ class TabbedMediaConverter:
         self.split_size = tk.StringVar(value="100")  # MB
         self.split_duration = tk.StringVar(value="300")  # seconds
         self.split_parts = tk.StringVar(value="3")  # number of parts
-        self.keep_original = tk.BooleanVar(value=False)
+        self.keep_original = tk.BooleanVar(value=True)
 
         # YouTube downloader variables
         self.youtube_url = tk.StringVar()
@@ -68,17 +78,42 @@ class TabbedMediaConverter:
         # Setup close event to save settings
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def update_format_ui(self):
-        """Update format UI based on selected media type"""
-        # Clean up previous dynamic labels
-        for label in self.dynamic_labels:
-            label.destroy()
-        self.dynamic_labels.clear()
+    def switch_tab(self, index):
+        """Switch to specified tab and update button styles"""
+        # Don't switch if already on this tab
+        if hasattr(self, 'current_tab') and self.current_tab == index:
+            return
 
-        # Hide all widgets first
+        # Switch tab immediately
+        self.notebook.select(index)
+        self.current_tab = index
+
+        # Update button styles asynchronously to avoid blocking
+        self.root.after_idle(self._update_tab_button_styles, index)
+
+    def _update_tab_button_styles(self, active_index):
+        """Update button styles to show active tab"""
+        for idx, btn in self.tab_buttons.items():
+            if idx == active_index:
+                btn.configure(font=('Helvetica', 11, 'bold'),
+                            relief=tk.SUNKEN,
+                            bg='#d0d0d0')
+            else:
+                btn.configure(font=('Helvetica', 11),
+                            relief=tk.RAISED,
+                            bg='#f0f0f0')
+
+    def update_format_ui(self):
+        """Update format UI based on selected media type - optimized version"""
+        # Hide all widgets first (fast operation)
         for widget_dict in [self.audio_widgets, self.video_widgets]:
             for widget in widget_dict.values():
                 widget.grid_remove()
+
+        # Hide auto mode labels if they exist
+        if hasattr(self, 'auto_labels'):
+            for label in self.auto_labels.values():
+                label.grid_remove()
 
         media_type = self.media_type.get()
 
@@ -107,23 +142,17 @@ class TabbedMediaConverter:
             self.video_widgets['audio_bitrate_combo'].grid(row=row, column=1, padx=5, pady=2)
 
         else:  # auto
-            # Create and track dynamic labels with larger font
+            # Show auto mode labels and controls
             row = 0
-            audio_format_label = ttk.Label(self.format_frame, text="Audio Format:", font=('Helvetica', 10, 'bold'))
-            audio_format_label.grid(row=row, column=0, sticky=tk.W, pady=2)
-            self.dynamic_labels.append(audio_format_label)
+            self.auto_labels['audio_format'].grid(row=row, column=0, sticky=tk.W, pady=2)
             self.audio_widgets['format_combo'].grid(row=row, column=1, padx=5, pady=2)
 
             row += 1
-            video_format_label = ttk.Label(self.format_frame, text="Video Format:", font=('Helvetica', 10, 'bold'))
-            video_format_label.grid(row=row, column=0, sticky=tk.W, pady=2)
-            self.dynamic_labels.append(video_format_label)
+            self.auto_labels['video_format'].grid(row=row, column=0, sticky=tk.W, pady=2)
             self.video_widgets['format_combo'].grid(row=row, column=1, padx=5, pady=2)
 
             row += 1
-            quality_label = ttk.Label(self.format_frame, text="Quality:", font=('Helvetica', 10, 'italic'))
-            quality_label.grid(row=row, column=0, sticky=tk.W, pady=(10,2))
-            self.dynamic_labels.append(quality_label)
+            self.auto_labels['quality'].grid(row=row, column=0, sticky=tk.W, pady=(10,2))
 
             row += 1
             self.audio_widgets['bitrate_label'].grid(row=row, column=0, sticky=tk.W, pady=2)
@@ -136,26 +165,70 @@ class TabbedMediaConverter:
     def create_widgets(self):
         # Header
         header = ttk.Frame(self.root)
-        header.pack(fill=tk.X, padx=10, pady=5)
+        header.pack(fill=tk.X, padx=10, pady=(5, 0))
         ttk.Label(header, text="🎬 Media Tool Suite", font=('Helvetica', 16, 'bold')).pack()
 
-        # Create notebook (tabbed interface)
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # Custom tab selector using buttons
+        tab_selector_frame = ttk.Frame(self.root)
+        tab_selector_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
+
+        # Tab selector buttons - using tk.Button for consistent font behavior
+        self.tab_buttons = {}
+        tab_names = [
+            ("Convert", 0),
+            ("Split", 1),
+            ("YouTube", 2),
+            ("Screen Record", 3),
+            ("Settings", 4),
+            ("History", 5)
+        ]
+
+        for name, index in tab_names:
+            btn = tk.Button(tab_selector_frame, text=name,
+                           command=lambda i=index: self.switch_tab(i),
+                           font=('Helvetica', 11),
+                           relief=tk.RAISED,
+                           bd=1,
+                           padx=20,
+                           pady=8,
+                           bg='#f0f0f0',
+                           activebackground='#e0e0e0')
+            btn.pack(side=tk.LEFT, padx=2)
+            self.tab_buttons[index] = btn
+
+        # Configure ttk styles for other buttons
+        style = ttk.Style()
+        try:
+            style.configure('Accent.TButton', font=('Helvetica', 11, 'bold'))
+        except:
+            pass
+
+        # Create custom style for main notebook (without tabs)
+        style.layout('MainNotebook', [('Notebook.client', {'sticky': 'nswe'})])
+
+        # Create notebook (tabbed interface) - hide the tabs using custom style
+        self.notebook = ttk.Notebook(self.root, style='MainNotebook')
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 5))
 
         # Create tabs
         self.convert_tab = ttk.Frame(self.notebook)
         self.split_tab = ttk.Frame(self.notebook)
+        self.youtube_tab = ttk.Frame(self.notebook)
         self.recording_tab = ttk.Frame(self.notebook)
         self.settings_tab = ttk.Frame(self.notebook)
         self.history_tab = ttk.Frame(self.notebook)
 
-        # Add tabs to notebook
-        self.notebook.add(self.convert_tab, text="🔄 Convert")
-        self.notebook.add(self.split_tab, text="✂️ Split")
-        self.notebook.add(self.recording_tab, text="🎥 Screen Record")
-        self.notebook.add(self.settings_tab, text="⚙️ Settings")
-        self.notebook.add(self.history_tab, text="📊 History")
+        # Add tabs to notebook (text not visible as we use custom buttons)
+        self.notebook.add(self.convert_tab, text="")
+        self.notebook.add(self.split_tab, text="")
+        self.notebook.add(self.youtube_tab, text="")
+        self.notebook.add(self.recording_tab, text="")
+        self.notebook.add(self.settings_tab, text="")
+        self.notebook.add(self.history_tab, text="")
+
+        # Set initial tab
+        self.current_tab = 0
+        self.switch_tab(0)
 
         # History tracking
         self.conversion_history = []
@@ -164,6 +237,7 @@ class TabbedMediaConverter:
         # Setup each tab
         self.setup_convert_tab()
         self.setup_split_tab()
+        self.setup_youtube_tab()
         self.setup_recording_tab()
         self.setup_settings_tab()
         self.setup_history_tab()
@@ -194,13 +268,13 @@ class TabbedMediaConverter:
             self.add_files('convert')
 
         ttk.Button(btn_frame, text="Add Files",
-                  command=test_add_files).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=test_add_files).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
         ttk.Button(btn_frame, text="Add Folder",
-                  command=lambda: self.add_folder('convert')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.add_folder('convert')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
         ttk.Button(btn_frame, text="Remove",
-                  command=lambda: self.remove_selected('convert')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.remove_selected('convert')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
         ttk.Button(btn_frame, text="Clear",
-                  command=lambda: self.clear_files('convert')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.clear_files('convert')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
 
         # Settings frame
         settings_frame = ttk.Frame(main_frame)
@@ -255,8 +329,11 @@ class TabbedMediaConverter:
                                                                  values=["128k", "192k", "256k", "320k"],
                                                                  state="readonly", width=15)
 
-        # Track dynamic labels for cleanup
-        self.dynamic_labels = []
+        # Create auto mode labels (pre-created, shown/hidden as needed)
+        self.auto_labels = {}
+        self.auto_labels['audio_format'] = ttk.Label(self.format_frame, text="Audio Format:", font=('Helvetica', 10, 'bold'))
+        self.auto_labels['video_format'] = ttk.Label(self.format_frame, text="Video Format:", font=('Helvetica', 10, 'bold'))
+        self.auto_labels['quality'] = ttk.Label(self.format_frame, text="Quality:", font=('Helvetica', 10, 'italic'))
 
         # Initialize UI
         self.update_format_ui()
@@ -296,110 +373,11 @@ class TabbedMediaConverter:
         self.convert_status.pack()
 
     def setup_split_tab(self):
-        """Setup the Split tab"""
-        # Create main container with left progress and right content
-        container = ttk.Frame(self.split_tab, padding="10")
-        container.pack(fill=tk.BOTH, expand=True)
+        """Setup the Split tab - simplified without YouTube"""
+        main_frame = ttk.Frame(self.split_tab, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Left side for shared vertical progress bar
-        progress_frame = ttk.Frame(container)
-        progress_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
-
-        # Shared vertical progress bar
-        ttk.Label(progress_frame, text="Progress", font=('Helvetica', 10, 'bold'), foreground='#2E8B57').pack(pady=(0, 5))
-
-        # Create custom progress bar using Canvas (0.5cm ≈ 38 pixels wide)
-        self.shared_progress = tk.Canvas(progress_frame, width=38, height=400, bg='#E0E0E0',
-                                       relief='sunken', bd=1, highlightthickness=0)
-        self.shared_progress.pack(pady=5)
-
-        # Initialize progress bar background
-        self._progress_bg = self.shared_progress.create_rectangle(0, 0, 38, 400,
-                                                                fill='#E0E0E0', outline='')
-        self._progress_fill = self.shared_progress.create_rectangle(0, 400, 38, 400,
-                                                                  fill='#2E8B57', outline='')
-        self._progress_value = 0
-
-        # Progress percentage label with better contrast
-        self.progress_percent = ttk.Label(progress_frame, text="0%", font=('Helvetica', 14, 'bold'),
-                                        foreground='#2E8B57', background='white')
-        self.progress_percent.pack(pady=(8, 0))
-
-        # Combined status with better visibility
-        self.combined_status = ttk.Label(progress_frame, text="Ready", font=('Helvetica', 10, 'bold'),
-                                       wraplength=80, foreground='#2E8B57', background='white')
-        self.combined_status.pack(pady=(10, 0))
-
-        # Right side for content (YouTube + Media Files)
-        main_frame = ttk.Frame(container)
-        main_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-
-        # YouTube download section
-        youtube_frame = ttk.LabelFrame(main_frame, text="YouTube Download & Split", padding="10")
-        youtube_frame.pack(fill=tk.X, pady=(0, 10))
-
-        # URL input
-        url_frame = ttk.Frame(youtube_frame)
-        url_frame.pack(fill=tk.X, pady=(0, 5))
-
-        ttk.Label(url_frame, text="YouTube URL:").pack(side=tk.LEFT, padx=(0, 10))
-        self.youtube_url = tk.StringVar()
-        url_entry = ttk.Entry(url_frame, textvariable=self.youtube_url, width=50)
-        url_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-
-        # YouTube options and single download button
-        yt_control_frame = ttk.Frame(youtube_frame)
-        yt_control_frame.pack(fill=tk.X, pady=5)
-
-        # Mode selection on the left
-        mode_frame = ttk.Frame(yt_control_frame)
-        mode_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        ttk.Label(mode_frame, text="Mode:").pack(side=tk.LEFT, padx=(0, 5))
-        mode_combo = ttk.Combobox(mode_frame, textvariable=self.youtube_mode,
-                                  values=["📥 Download", "⚡ Download & Split", "🎵 Audio Only", "📋 Playlist"],
-                                  state="readonly", width=18)
-        mode_combo.set("📥 Download")
-        mode_combo.pack(side=tk.LEFT, padx=(0, 20))
-
-        # Single large download button on the right
-        self.youtube_download_btn = ttk.Button(yt_control_frame, text="🔽 DOWNLOAD",
-                                             command=self.download_youtube_unified,
-                                             style="Accent.TButton")
-        self.youtube_download_btn.pack(side=tk.RIGHT, ipadx=20, ipady=10)
-
-        # YouTube options
-        yt_options = ttk.Frame(youtube_frame)
-        yt_options.pack(fill=tk.X, pady=5)
-
-        ttk.Label(yt_options, text="Format:").pack(side=tk.LEFT, padx=(0, 5))
-        format_combo = ttk.Combobox(yt_options, textvariable=self.youtube_format,
-                                    values=["mp4", "webm", "mkv", "flv", "avi"],
-                                    state="readonly", width=8)
-        format_combo.pack(side=tk.LEFT, padx=(0, 15))
-
-        ttk.Label(yt_options, text="Quality:").pack(side=tk.LEFT, padx=(0, 5))
-        quality_combo = ttk.Combobox(yt_options, textvariable=self.youtube_quality,
-                                     values=["best", "1080p", "720p", "480p", "360p", "audio"],
-                                     state="readonly", width=10)
-        quality_combo.pack(side=tk.LEFT, padx=(0, 15))
-
-        ttk.Label(yt_options, text="Max Downloads:").pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Spinbox(yt_options, from_=1, to=10, textvariable=self.max_downloads,
-                   width=5).pack(side=tk.LEFT, padx=(0, 15))
-
-
-        # Note about workflow
-        workflow_note = ttk.Label(yt_options, text="💡 下載後可在下方進行分割 →",
-                                 font=('Helvetica', 9, 'italic'), foreground='#666666')
-        workflow_note.pack(side=tk.LEFT)
-
-        # YouTube progress (now uses shared progress bar)
-        # Progress status will be shown in the shared vertical progress bar
-
-        # YouTube status now handled by shared progress bar on left
-
-        # File list (bottom half of right side)
+        # File list
         list_frame = ttk.LabelFrame(main_frame, text="Media Files to Split", padding="10")
         list_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -409,7 +387,7 @@ class TabbedMediaConverter:
 
         self.split_btn = ttk.Button(split_btn_frame, text="✂️ Split Selected Files",
                                    command=self.split_files_action)
-        self.split_btn.pack(side=tk.LEFT, padx=5, ipadx=20, ipady=8)
+        self.split_btn.pack(side=tk.LEFT, padx=5, ipadx=40, ipady=15)
 
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -424,18 +402,18 @@ class TabbedMediaConverter:
         btn_frame_row1.pack(fill=tk.X, pady=(5, 2))
 
         ttk.Button(btn_frame_row1, text="Add Files",
-                  command=lambda: self.add_files('split')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.add_files('split')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
         ttk.Button(btn_frame_row1, text="Add Folder",
-                  command=self.add_large_files).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=self.add_large_files).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
 
         # Second row of buttons
         btn_frame_row2 = ttk.Frame(list_frame)
         btn_frame_row2.pack(fill=tk.X, pady=(2, 5))
 
         ttk.Button(btn_frame_row2, text="Remove",
-                  command=lambda: self.remove_selected('split')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.remove_selected('split')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
         ttk.Button(btn_frame_row2, text="Clear",
-                  command=lambda: self.clear_files('split')).pack(side=tk.LEFT, padx=5, ipadx=12, ipady=6)
+                  command=lambda: self.clear_files('split')).pack(side=tk.LEFT, padx=5, ipadx=20, ipady=10)
 
         # Split settings (inside Media Files section)
         settings_frame = ttk.LabelFrame(list_frame, text="Split Settings", padding="10")
@@ -474,6 +452,71 @@ class TabbedMediaConverter:
                        variable=self.keep_original).pack(anchor=tk.W, pady=5)
 
         # Progress and status now handled by shared vertical progress bar on the left
+
+
+    def setup_youtube_tab(self):
+        """Setup the YouTube Download tab"""
+        main_frame = ttk.Frame(self.youtube_tab, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # YouTube download section
+        youtube_frame = ttk.LabelFrame(main_frame, text="YouTube Download", padding="10")
+        youtube_frame.pack(fill=tk.BOTH, expand=True)
+
+        # URL input
+        url_frame = ttk.Frame(youtube_frame)
+        url_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(url_frame, text="YouTube URL:").pack(side=tk.LEFT, padx=(0, 10))
+        url_entry = ttk.Entry(url_frame, textvariable=self.youtube_url, width=50)
+        url_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+
+        # YouTube options
+        options_frame = ttk.LabelFrame(youtube_frame, text="Download Options", padding="10")
+        options_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # Mode selection
+        mode_frame = ttk.Frame(options_frame)
+        mode_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(mode_frame, text="Mode:").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Radiobutton(mode_frame, text="Download", value="Download", variable=self.youtube_mode).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(mode_frame, text="Download & Split", value="Download & Split", variable=self.youtube_mode).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(mode_frame, text="Audio Only", value="Audio Only", variable=self.youtube_mode).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(mode_frame, text="Playlist", value="Playlist", variable=self.youtube_mode).pack(side=tk.LEFT, padx=5)
+
+        # Format and quality
+        quality_frame = ttk.Frame(options_frame)
+        quality_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(quality_frame, text="Format:").pack(side=tk.LEFT, padx=(0, 5))
+        format_combo = ttk.Combobox(quality_frame, textvariable=self.youtube_format,
+                                    values=["mp4", "webm", "mkv", "flv", "avi"],
+                                    state="readonly", width=8)
+        format_combo.pack(side=tk.LEFT, padx=(0, 20))
+
+        ttk.Label(quality_frame, text="Quality:").pack(side=tk.LEFT, padx=(0, 5))
+        quality_combo = ttk.Combobox(quality_frame, textvariable=self.youtube_quality,
+                                     values=["best", "1080p", "720p", "480p", "360p", "audio"],
+                                     state="readonly", width=10)
+        quality_combo.pack(side=tk.LEFT, padx=(0, 20))
+
+        ttk.Label(quality_frame, text="Max Downloads:").pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Spinbox(quality_frame, from_=1, to=10, textvariable=self.max_downloads,
+                   width=5).pack(side=tk.LEFT)
+
+        # Download button
+        self.youtube_download_btn = ttk.Button(youtube_frame, text="🔽 DOWNLOAD",
+                                             command=self.download_youtube_unified,
+                                             style="Accent.TButton")
+        self.youtube_download_btn.pack(pady=15, ipadx=30, ipady=15)
+
+        # Progress
+        self.youtube_progress = ttk.Progressbar(youtube_frame, mode='determinate')
+        self.youtube_progress.pack(fill=tk.X, pady=5)
+
+        # Status
+        self.youtube_status = ttk.Label(youtube_frame, text="Ready")
+        self.youtube_status.pack()
 
     def setup_recording_tab(self):
         """Setup the Screen Recording tab"""
@@ -600,11 +643,11 @@ class TabbedMediaConverter:
         )
         self.recording_output_label.pack(pady=10)
 
-        # Initialize recorder and refresh devices
+        # Initialize recorder and refresh devices (no popup on startup)
         self.screen_recorder = ScreenRecorder()
-        self.refresh_recording_devices()
+        self.refresh_recording_devices(show_message=False)
 
-    def refresh_recording_devices(self):
+    def refresh_recording_devices(self, show_message=True):
         """Refresh available recording devices"""
         try:
             if not self.screen_recorder:
@@ -628,10 +671,13 @@ class TabbedMediaConverter:
             if audio_devices:
                 self.audio_device_combo.current(0)
 
-            messagebox.showinfo("Success", f"Found {len(video_devices)} video and {len(audio_devices)} audio devices")
+            # Only show message if explicitly requested (e.g., manual refresh button click)
+            if show_message:
+                messagebox.showinfo("Success", f"Found {len(video_devices)} video and {len(audio_devices)} audio devices")
 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to refresh devices: {str(e)}")
+            if show_message:
+                messagebox.showerror("Error", f"Failed to refresh devices: {str(e)}")
 
     def start_recording(self):
         """Start screen recording"""
@@ -746,13 +792,25 @@ class TabbedMediaConverter:
                  font=('Helvetica', 9), foreground='#666666',
                  wraplength=650).pack(anchor=tk.W)
 
-        # Create notebook for settings categories
-        settings_notebook = ttk.Notebook(main_frame)
-        settings_notebook.pack(fill=tk.BOTH, expand=True)
+        # Create scrollable frame for all settings (no sub-tabs)
+        canvas = tk.Canvas(main_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
 
-        # Convert defaults tab
-        convert_defaults_frame = ttk.Frame(settings_notebook)
-        settings_notebook.add(convert_defaults_frame, text="Convert")
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Convert defaults section
+        convert_defaults_frame = ttk.LabelFrame(scrollable_frame, text="Convert 預設設定", padding="10")
+        convert_defaults_frame.pack(fill=tk.X, pady=(0, 10))
 
         # Convert section description
         convert_desc_frame = ttk.Frame(convert_defaults_frame)
@@ -794,9 +852,9 @@ class TabbedMediaConverter:
         ttk.Checkbutton(convert_defaults_frame, text="Enable audio normalization by default",
                        variable=self.default_normalize).pack(anchor=tk.W, pady=5)
 
-        # Split defaults tab
-        split_defaults_frame = ttk.Frame(settings_notebook)
-        settings_notebook.add(split_defaults_frame, text="Split")
+        # Split defaults section
+        split_defaults_frame = ttk.LabelFrame(scrollable_frame, text="Split 預設設定", padding="10")
+        split_defaults_frame.pack(fill=tk.X, pady=(0, 10))
 
         # Split section description
         split_desc_frame = ttk.Frame(split_defaults_frame)
@@ -828,9 +886,9 @@ class TabbedMediaConverter:
         ttk.Checkbutton(split_defaults_frame, text="Keep original files after splitting by default",
                        variable=self.default_keep_original).pack(anchor=tk.W, pady=5)
 
-        # General settings tab
-        general_frame = ttk.Frame(settings_notebook)
-        settings_notebook.add(general_frame, text="General")
+        # General settings section
+        general_frame = ttk.LabelFrame(scrollable_frame, text="一般預設設定", padding="10")
+        general_frame.pack(fill=tk.X, pady=(0, 10))
 
         # General section description
         general_desc_frame = ttk.Frame(general_frame)

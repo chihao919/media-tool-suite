@@ -43,7 +43,7 @@ class AppConstants:
             'duration': '300',
             'size': '100',
             'parts': '2',
-            'keep_original': False
+            'keep_original': True
         },
         'recording': {
             'framerate': '30',
