@@ -90,4 +90,4 @@ settings.json
 # Temporary files
 *.tmp
 *.temp
-.temporary/
+.temporary//backup/

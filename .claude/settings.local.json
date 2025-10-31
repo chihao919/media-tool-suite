@@ -29,7 +29,20 @@
       "Bash(pip3 list:*)",
       "Bash(open \"builds/dist/檔案豪幫手.app\")",
       "Bash(cat:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial release of 檔案豪幫手 v2.0.0\n\nA comprehensive media processing application with the following features:\n- Audio conversion (WAV, MP3, M4A, FLAC)\n- Video conversion and splitting\n- Screen recording with system audio\n- YouTube video downloading\n- User-friendly tabbed interface\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(gh repo create:*)",
+      "Bash(gh release create:*)",
+      "Bash(mkdir:*)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "Bash(screencapture:*)",
+      "Read(//tmp/**)",
+      "Bash(osascript:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(PYTHONPATH=../src:$PYTHONPATH python3 -m pytest:*)",
+      "Bash(PYTHONPATH=./src:$PYTHONPATH python3 -m pytest:*)",
+      "Bash(export PYTHONPATH=./src:$PYTHONPATH:*)"
     ],
     "deny": [],
     "ask": []
